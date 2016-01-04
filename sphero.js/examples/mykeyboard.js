@@ -3,14 +3,41 @@
 /* eslint no-use-before-define: 0 */
 /* eslint no-process-exit: 0 */
 
-var sphero   = require("../");
+var sphero   = require("/Users/ocartier/projects/bb8/sphero.js/");
 var keypress = require("keypress");
 var bb8      = sphero(process.env.PORT);
 
+var heading  = 0;
 bb8.connect(listen);
 
+function listen() {
+  bb8.configureCollisions({
+    meth: 0x01,
+    xt: 0x20,
+    yt: 0x20,
+    xs: 0x20,
+    ys: 0x20,
+    dead: 0x50
+  });
+  bb8.on("collision", function(err, data) {
+    if (err) {
+      console.log(err);
+    } else {
+      console.log("collision detected!");
+    }
+  });
+
+  keypress(process.stdin);
+  process.stdin.on("keypress", handle);
+  
+  console.log("Connected to BB and listening to keyboard...");
+
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+}
+
 function handle(ch, key) {
-  var stop = bb8.roll.bind(bb8, 0, 0);
+  //var stop = bb8.roll.bind(bb8, 0, 0);
 
   var input = ch;
   if (key !== undefined) {
@@ -56,9 +83,18 @@ function handle(ch, key) {
     });
   }
 
-  if (input === 's') {
-    bb8.sleep(10, 0, 0, function(err, data) {
-      console.log(err || "data: " + data);
+  if (input === 'l') {
+    bb8.readLocator(function(err, data) {
+      if (err) {
+        console.log(err);
+      } else {
+        console.log("data:");
+        console.log("  xpos:", data.xpos);
+        console.log("  ypos:", data.ypos);
+        console.log("  xvel:", data.xvel);
+        console.log("  yvel:", data.yvel);
+        console.log("  sog:", data.sog); 
+      }
     });
   }
 
@@ -92,31 +128,36 @@ function handle(ch, key) {
     });
   }
 
-  // max speed is 255 !!!
+  if (input === "g") {
+    bb8.runMacro(1);
+  }
+
   if (input === "up") {
-    bb8.roll(155, 0);
+    heading = 0;
+    bb8.roll(55, heading);
   }
 
   if (input === "down") {
-    bb8.roll(155, 180);
+    heading = 180;
+    bb8.roll(55, heading);
   }
 
   if (input === "left") {
-    bb8.roll(155, 270);
+    heading = 270;
+    bb8.roll(55, heading);
   }
 
   if (input === "right") {
-    bb8.roll(155, 90);
+    heading = 90;
+    bb8.roll(55, heading);
   }
 
   if (input === "space") {
-    stop();
-  }
-  if (input === "enter") {
-    bb8.boost(1);
+    bb8.roll(0, heading);
   }
 
   if (input === 'c' && key.ctrl) {
+    bb8.sleep(1, 0, 0);
     bb8.disconnect(disconnected);
     process.stdin.pause();
     process.exit();
@@ -129,31 +170,6 @@ function handle(ch, key) {
     bb8.finishCalibration();
     console.log("calibration finished");
   }
-}
-
-function listen() {
-  bb8.configureCollisions({
-    meth: 0x01,
-    xt: 0x20,
-    yt: 0x20,
-    xs: 0x20,
-    ys: 0x20,
-    dead: 0x50
-  });
-  bb8.on("collision", function(err, data) {
-    if (err) {
-      console.log(err);
-    } else {
-      console.log("collision detected!");
-    }
-  });
-
-  keypress(process.stdin);
-  process.stdin.on("keypress", handle);
-  console.log("Connected to BB and listening to keyboard...");
-
-  process.stdin.setRawMode(true);
-  process.stdin.resume();
 }
 
 function disconnected() {
